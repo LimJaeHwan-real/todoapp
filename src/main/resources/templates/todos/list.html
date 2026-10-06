@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>할일 목록</title>
+    <style>
+        body{font-family:system-ui,sans-serif;background:#f5f7fa;color:#182334;margin:0;line-height:1.6}
+        main{max-width:760px;margin:48px auto;padding:28px;background:white;border-radius:12px}
+        header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+        h1{margin:0}a{color:#1d4ed8}a:focus-visible{outline:3px solid #2563eb;outline-offset:4px}
+        .button{display:inline-block;background:#1d4ed8;color:white;text-decoration:none;padding:10px 16px;border-radius:6px}
+        ul{list-style:none;padding:0;margin:24px 0 0}li{padding:18px 0;border-top:1px solid #dbe1e8}
+        li a{font-weight:600;overflow-wrap:anywhere}time{display:block;font-size:.9rem;color:#526175}
+        .empty{margin-top:32px;color:#526175}@media(max-width:800px){main{margin:16px;padding:20px}}
+    </style>
+</head>
+<body>
+<main>
+    <header><h1>할일 목록</h1><a class="button" th:href="@{/todos/new}">새 할일 등록</a></header>
+    <p class="empty" th:if="${#lists.isEmpty(todos)}">등록된 할일이 없습니다. 새 할일을 등록해 보세요.</p>
+    <ul th:unless="${#lists.isEmpty(todos)}">
+        <li th:each="todo : ${todos}">
+            <a th:href="@{/todos/{id}(id=${todo.id})}" th:text="${todo.title}">할일 제목</a>
+            <time th:if="${todo.createdAt != null}" th:datetime="${todo.createdAt}"
+                  th:text="${#temporals.format(todo.createdAt, 'yyyy-MM-dd HH:mm')}">등록일</time>
+        </li>
+    </ul>
+</main>
+</body>
+</html>

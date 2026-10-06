@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title th:text="${editing ? '할일 수정' : '새 할일 등록'}">할일 입력</title>
+    <style>
+        body{font-family:system-ui,sans-serif;background:#f5f7fa;color:#182334;margin:0;line-height:1.6}
+        main{max-width:760px;margin:48px auto;padding:28px;background:white;border-radius:12px}
+        a{color:#1d4ed8}label{display:block;font-weight:600;margin:22px 0 8px}
+        input,textarea{box-sizing:border-box;width:100%;font:inherit;padding:10px 12px;border:1px solid #8492a6;border-radius:6px}
+        textarea{resize:vertical;min-height:160px}.hint{font-size:.9rem;color:#526175;margin:6px 0}
+        .error{color:#b91c1c;margin:8px 0}.invalid{border-color:#b91c1c}.actions{display:flex;align-items:center;gap:16px;margin-top:28px}
+        button{font:inherit;border:0;background:#1d4ed8;color:white;padding:10px 16px;border-radius:6px;cursor:pointer}
+        a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #2563eb;outline-offset:3px}
+        @media(max-width:800px){main{margin:16px;padding:20px}}
+    </style>
+</head>
+<body>
+<main>
+    <h1 th:text="${editing ? '할일 수정' : '새 할일 등록'}">할일 입력</h1>
+    <form method="post" th:object="${todoForm}"
+          th:action="${editing} ? @{/todos/{id}/edit(id=${todoId})} : @{/todos}">
+        <label for="title">제목 (필수)</label>
+        <input type="text" th:field="*{title}" required="required" aria-describedby="title-hint title-error"
+               th:errorclass="invalid" th:attr="aria-invalid=${#fields.hasErrors('title')}" />
+        <p id="title-hint" class="hint">앞뒤 공백을 제외하고 1~255자로 입력해 주세요.</p>
+        <p id="title-error" class="error" role="alert" th:if="${#fields.hasErrors('title')}" th:errors="*{title}">제목 오류</p>
+        <label for="detail">내용 (선택)</label>
+        <textarea th:field="*{detail}" rows="7"></textarea>
+        <div class="actions">
+            <button type="submit" th:text="${editing ? '수정 저장' : '등록'}">저장</button>
+            <a th:href="${editing} ? @{/todos/{id}(id=${todoId})} : @{/todos}">취소</a>
+        </div>
+    </form>
+</main>
+</body>
+</html>
