@@ -72,7 +72,8 @@ class AuthenticationControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(xpath("//form[@action='/signup'][@method='post']").exists())
                 .andExpect(xpath("//form/input[@name='_csrf']").exists())
-                .andExpect(xpath("//input[@name='password'][@type='password'][not(@value)]").exists());
+                .andExpect(xpath("//input[@name='password'][@type='password'][@minlength='4'][not(@value)]").exists())
+                .andExpect(xpath("//p[@id='password-hint']").string(org.hamcrest.Matchers.containsString("4자 이상")));
     }
 
     @Test
@@ -143,7 +144,8 @@ class AuthenticationControllerTests {
                 .andExpect(status().isOk()).andExpect(model().attributeHasErrors("signupForm"))
                 .andExpect(xpath("//input[@name='password'][not(@value)]").exists());
         assertThat(repository.accounts).isEmpty();
-        mvc.perform(post("/signup").with(csrf()).param("username", "member").param("password", "short"))
+        mvc.perform(post("/signup").with(csrf()).param("username", "member")
+                        .param("password", UUID.randomUUID().toString().substring(0, 3)))
                 .andExpect(model().attributeHasErrors("signupForm"));
         assertThat(repository.accounts).isEmpty();
     }

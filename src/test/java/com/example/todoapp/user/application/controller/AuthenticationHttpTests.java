@@ -132,6 +132,20 @@ class AuthenticationHttpTests {
     }
 
     @Test
+    void threeCharacterPasswordIsRejectedAndFourCharacterPasswordCanLoginOverHttp() throws Exception {
+        password = UUID.randomUUID().toString().substring(0, 3);
+        HttpResponse<String> rejected = post("/signup", Map.of("username", username, "password", password,
+                "_csrf", csrf(get("/signup"))));
+        status(rejected, 200);
+        assertThat(accounts.isEmpty()).isTrue();
+        assertThat(rejected.body().contains("4자 이상")).isTrue();
+        password = UUID.randomUUID().toString().substring(0, 4);
+        register();
+        login();
+        status(get("/todos"), 200);
+    }
+
+    @Test
     void signupLoginSessionRotationAndLogoutWorkOverHttp() throws Exception {
         register();
         User stored = accounts.get(username);

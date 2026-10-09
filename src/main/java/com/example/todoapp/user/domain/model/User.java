@@ -23,9 +23,9 @@ public class User {
 
     public static void validatePassword(String password) {
         if (password == null || password.isBlank()
-                || password.codePointCount(0, password.length()) < 8
+                || password.codePointCount(0, password.length()) < 4
                 || password.getBytes(StandardCharsets.UTF_8).length > 72) {
-            throw new IllegalArgumentException("비밀번호는 8자 이상, UTF-8 기준 72바이트 이하로 입력해 주세요.");
+            throw new IllegalArgumentException("비밀번호는 4자 이상, UTF-8 기준 72바이트 이하로 입력해 주세요.");
         }
     }
 }

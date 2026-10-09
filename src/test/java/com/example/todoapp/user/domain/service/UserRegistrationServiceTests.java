@@ -56,10 +56,20 @@ class UserRegistrationServiceTests {
 
     @ParameterizedTest
     @NullAndEmptySource
-    @ValueSource(strings = {"short", "        "})
+    @ValueSource(strings = {"abc", "        "})
     void invalidPasswordsAreRejectedBeforeDatabaseAccess(String password) {
         assertThatThrownBy(() -> service.register("member", password)).isInstanceOf(IllegalArgumentException.class);
         verifyNoInteractions(repository);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {4, 7})
+    void passwordsStartingAtFourCharactersAreStoredAsBcrypt(int length) {
+        String raw = UUID.randomUUID().toString().substring(0, length);
+        service.register("member", raw);
+        var captor = ArgumentCaptor.forClass(User.class);
+        verify(repository).insert(captor.capture());
+        assertThat(configuration.passwordEncoder().matches(raw, captor.getValue().getPasswordHash())).isTrue();
     }
 
     @Test
