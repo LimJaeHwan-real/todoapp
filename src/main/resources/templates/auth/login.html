@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>로그인</title>
+    <style>
+        body{font-family:system-ui,sans-serif;background:#f5f7fa;color:#182334;margin:0;line-height:1.6}
+        main{max-width:440px;margin:48px auto;padding:28px;background:white;border-radius:12px}
+        label{display:block;font-weight:600;margin:20px 0 8px}
+        input{box-sizing:border-box;width:100%;font:inherit;padding:10px 12px;border:1px solid #8492a6;border-radius:6px}
+        button{font:inherit;border:0;background:#1d4ed8;color:white;padding:10px 16px;border-radius:6px;cursor:pointer}
+        a{color:#1d4ed8}.actions{display:flex;align-items:center;gap:16px;margin-top:24px}.error{color:#b91c1c}
+        a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid #2563eb;outline-offset:3px}
+        @media(max-width:520px){main{margin:16px;padding:20px}}
+    </style>
+</head>
+<body>
+<main>
+    <h1>로그인</h1>
+    <p th:if="${param.registered}" role="status">회원가입이 완료되었습니다. 로그인해 주세요.</p>
+    <p th:if="${param.logout}" role="status">로그아웃되었습니다.</p>
+    <p th:if="${param.error}" class="error" role="alert">로그인할 수 없습니다. 아이디와 비밀번호를 확인하거나 잠시 후 다시 시도해 주세요.</p>
+    <form th:action="@{/login}" method="post">
+        <label for="username">아이디</label>
+        <input id="username" name="username" type="text" autocomplete="username" required="required" maxlength="50" />
+        <label for="password">비밀번호</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required="required" />
+        <div class="actions"><button type="submit">로그인</button><a th:href="@{/signup}">회원가입</a></div>
+    </form>
+</main>
+</body>
+</html>

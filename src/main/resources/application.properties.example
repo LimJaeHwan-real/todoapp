@@ -1,0 +1,11 @@
+spring.application.name=todoapp
+
+# 이 파일을 application.properties로 복사하고 환경 변수를 설정한다.
+spring.datasource.url=jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME}
+spring.datasource.username=${DB_USERNAME}
+spring.datasource.password=${DB_PASSWORD}
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# 기존 데이터베이스는 자동으로 초기화하지 않는다.
+# 기존 todos 테이블에는 sql/add-todo-author.sql을 별도로 적용한다.
+spring.sql.init.mode=never

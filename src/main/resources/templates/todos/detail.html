@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>할일 상세</title>
+    <style>
+        body{font-family:system-ui,sans-serif;background:#f5f7fa;color:#182334;margin:0;line-height:1.6}
+        main{max-width:760px;margin:48px auto;padding:28px;background:white;border-radius:12px}
+        h1{overflow-wrap:anywhere}a{color:#1d4ed8}.detail{white-space:pre-wrap;overflow-wrap:anywhere}
+        dt{font-weight:600}dd{margin:0 0 12px;color:#526175}.actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:28px}
+        .button,button{display:inline-block;font:inherit;border:0;border-radius:6px;padding:10px 16px;cursor:pointer;text-decoration:none}
+        .button{background:#1d4ed8;color:white}button{background:#b91c1c;color:white}form{margin:0}
+        a:focus-visible,button:focus-visible{outline:3px solid #2563eb;outline-offset:4px}
+        dialog{max-width:min(420px,calc(100vw - 64px));padding:24px;border:1px solid #dbe1e8;border-radius:12px;color:#182334}
+        dialog::backdrop{background:rgb(24 35 52 / .45)}dialog h2{margin-top:0}
+        .cancel{background:#e5eaf1;color:#182334}
+        @media(max-width:800px){main{margin:16px;padding:20px}}
+    </style>
+</head>
+<body>
+<main>
+    <a th:href="@{/todos}">목록으로</a>
+    <h1 th:text="${todo.title}">할일 제목</h1>
+    <p class="detail" th:if="${todo.detail != null and !#strings.isEmpty(todo.detail)}" th:text="${todo.detail}">할일 내용</p>
+    <p th:if="${todo.detail == null or #strings.isEmpty(todo.detail)}">등록된 내용이 없습니다.</p>
+    <dl>
+        <dt>등록일</dt><dd th:text="${todo.createdAt != null ? #temporals.format(todo.createdAt, 'yyyy-MM-dd HH:mm') : '—'}">등록일</dd>
+        <dt>수정일</dt><dd th:text="${todo.updatedAt != null ? #temporals.format(todo.updatedAt, 'yyyy-MM-dd HH:mm') : '—'}">수정일</dd>
+    </dl>
+    <div class="actions" th:if="${canEdit}">
+        <a class="button" th:href="@{/todos/{id}/edit(id=${todo.id})}">수정</a>
+        <button type="button" onclick="document.getElementById('delete-dialog').showModal();">삭제</button>
+    </div>
+    <p th:unless="${canEdit}">본인이 작성한 항목만 수정·삭제할 수 있습니다.</p>
+    <dialog th:if="${canEdit}" id="delete-dialog" aria-labelledby="delete-dialog-title" aria-describedby="delete-dialog-description">
+        <h2 id="delete-dialog-title">할일 삭제 확인</h2>
+        <p id="delete-dialog-description">이 할일을 삭제하시겠습니까? 삭제한 할일은 되돌릴 수 없습니다.</p>
+        <form method="post" th:action="@{/todos/{id}/delete(id=${todo.id})}">
+            <div class="actions">
+                <button type="button" class="cancel" autofocus="autofocus" onclick="document.getElementById('delete-dialog').close();">취소</button>
+                <button type="submit">삭제 확인</button>
+            </div>
+        </form>
+    </dialog>
+</main>
+</body>
+</html>
