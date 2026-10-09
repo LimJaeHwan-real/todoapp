@@ -30,7 +30,7 @@ public interface TodoRepository {
     Integer insert(Todo todo);
 
     /**
-     * 기본키에 해당하는 할일의 제목, 내용, 수정일을 변경한다. 등록일은 유지한다.
+     * 기본키와 작성자가 일치하는 할일의 제목, 내용, 수정일을 변경한다. 작성자와 등록일은 유지한다.
      *
      * @param todo 기본키와 변경할 정보를 담은 할일
      * @return 변경된 행 수. 대상이 없으면 0, 성공하면 1
@@ -39,7 +39,8 @@ public interface TodoRepository {
 
     /**
      * @param id 삭제할 할일의 기본키
+     * @param authorId 로그인한 회원의 기본키. 작성자가 일치하는 행만 삭제한다.
      * @return 삭제된 행 수. 대상이 없으면 0, 성공하면 1
      */
-    int deleteById(Integer id);
+    int deleteById(Integer id, Integer authorId);
 }

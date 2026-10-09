@@ -38,7 +38,7 @@ class TodoMapperTests {
         MappedStatement statement = statement("findAll");
 
         assertThat(sql(statement.getBoundSql(null)))
-                .isEqualTo("SELECT id, todo, detail, created_at, updated_at FROM todos "
+                .isEqualTo("SELECT id, todo, detail, created_at, updated_at, author_id FROM todos "
                         + "ORDER BY created_at DESC NULLS LAST, id DESC");
         assertThat(statement.getResultMaps().getFirst().getResultMappings())
                 .extracting(ResultMapping::getColumn, ResultMapping::getProperty)
@@ -47,7 +47,8 @@ class TodoMapperTests {
                         org.assertj.core.groups.Tuple.tuple("todo", "title"),
                         org.assertj.core.groups.Tuple.tuple("detail", "detail"),
                         org.assertj.core.groups.Tuple.tuple("created_at", "createdAt"),
-                        org.assertj.core.groups.Tuple.tuple("updated_at", "updatedAt"));
+                        org.assertj.core.groups.Tuple.tuple("updated_at", "updatedAt"),
+                        org.assertj.core.groups.Tuple.tuple("author_id", "authorId"));
     }
 
     @Test
@@ -55,7 +56,7 @@ class TodoMapperTests {
         BoundSql boundSql = statement("findById").getBoundSql(Map.of("id", 7));
 
         assertThat(sql(boundSql)).isEqualTo(
-                "SELECT id, todo, detail, created_at, updated_at FROM todos WHERE id = ?");
+                "SELECT id, todo, detail, created_at, updated_at, author_id FROM todos WHERE id = ?");
         assertThat(boundSql.getParameterMappings()).extracting(ParameterMapping::getProperty)
                 .containsExactly("id");
     }
@@ -69,9 +70,9 @@ class TodoMapperTests {
         BoundSql boundSql = statement.getBoundSql(row);
 
         assertThat(sql(boundSql)).isEqualTo(
-                "INSERT INTO todos (todo, detail, created_at, updated_at) VALUES (?, ?, ?, ?)");
+                "INSERT INTO todos (todo, detail, created_at, updated_at, author_id) VALUES (?, ?, ?, ?, ?)");
         assertThat(boundSql.getParameterMappings()).extracting(ParameterMapping::getProperty)
-                .containsExactly("title", "detail", "createdAt", "updatedAt");
+                .containsExactly("title", "detail", "createdAt", "updatedAt", "authorId");
         assertThat(statement.getKeyGenerator()).isInstanceOf(Jdbc3KeyGenerator.class);
         assertThat(statement.getKeyProperties()).containsExactly("id");
         assertThat(statement.getKeyColumns()).containsExactly("id");
@@ -82,18 +83,18 @@ class TodoMapperTests {
         BoundSql boundSql = statement("update").getBoundSql(new TodoRow());
 
         assertThat(sql(boundSql)).isEqualTo(
-                "UPDATE todos SET todo = ?, detail = ?, updated_at = ? WHERE id = ?");
+                "UPDATE todos SET todo = ?, detail = ?, updated_at = ? WHERE id = ? AND author_id = ?");
         assertThat(boundSql.getParameterMappings()).extracting(ParameterMapping::getProperty)
-                .containsExactly("title", "detail", "updatedAt", "id");
+                .containsExactly("title", "detail", "updatedAt", "id", "authorId");
     }
 
     @Test
     void deleteOnlyTargetsBoundId() {
-        BoundSql boundSql = statement("deleteById").getBoundSql(Map.of("id", 7));
+        BoundSql boundSql = statement("deleteById").getBoundSql(Map.of("id", 7, "authorId", 1));
 
-        assertThat(sql(boundSql)).isEqualTo("DELETE FROM todos WHERE id = ?");
+        assertThat(sql(boundSql)).isEqualTo("DELETE FROM todos WHERE id = ? AND author_id = ?");
         assertThat(boundSql.getParameterMappings()).extracting(ParameterMapping::getProperty)
-                .containsExactly("id");
+                .containsExactly("id", "authorId");
     }
 
     private MappedStatement statement(String method) {

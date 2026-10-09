@@ -108,9 +108,9 @@ class TodoRepositoryImplTests {
     @ParameterizedTest
     @ValueSource(ints = {0, 1})
     void deleteByIdReturnsAffectedRows(int affectedRows) {
-        when(mapper.deleteById(7)).thenReturn(affectedRows);
+        when(mapper.deleteById(7, 1)).thenReturn(affectedRows);
 
-        assertThat(repository.deleteById(7)).isEqualTo(affectedRows);
+        assertThat(repository.deleteById(7, 1)).isEqualTo(affectedRows);
     }
 
     @Test

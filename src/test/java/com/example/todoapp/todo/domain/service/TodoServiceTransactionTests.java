@@ -76,14 +76,14 @@ class TodoServiceTransactionTests {
             assertTransaction(false);
             return 1;
         });
-        when(repository.deleteById(7)).thenAnswer(invocation -> {
+        when(repository.deleteById(7, 1)).thenAnswer(invocation -> {
             assertTransaction(false);
             return 1;
         });
 
-        assertThat(service.create("등록 제목", null)).isEqualTo(42);
-        service.update(7, "수정 제목", null);
-        service.deleteById(7);
+        assertThat(service.create("등록 제목", null, 1)).isEqualTo(42);
+        service.update(7, "수정 제목", null, 1);
+        service.deleteById(7, 1);
 
         assertThat(transactionManager.commits).isEqualTo(3);
         assertThat(transactionManager.rollbacks).isZero();
@@ -94,7 +94,7 @@ class TodoServiceTransactionTests {
         var failure = new DataAccessResourceFailureException("Database unavailable");
         when(repository.insert(any(Todo.class))).thenThrow(failure);
 
-        assertThatThrownBy(() -> service.create("등록 제목", null)).isSameAs(failure);
+        assertThatThrownBy(() -> service.create("등록 제목", null, 1)).isSameAs(failure);
         assertThat(transactionManager.rollbacks).isEqualTo(1);
         assertThat(transactionManager.commits).isZero();
         assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
@@ -107,7 +107,7 @@ class TodoServiceTransactionTests {
 
     private static Todo existingTodo() {
         LocalDateTime date = LocalDateTime.of(2026, 10, 5, 9, 0);
-        return new Todo(7, "기존 제목", null, date, date);
+        return new Todo(7, "기존 제목", null, date, date, 1);
     }
 
     @Configuration(proxyBeanMethods = false)

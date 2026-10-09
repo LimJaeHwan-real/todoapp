@@ -17,4 +17,5 @@ public class TodoRow {
     private String detail;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Integer authorId;
 }

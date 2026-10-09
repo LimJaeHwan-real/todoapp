@@ -60,19 +60,20 @@ class TodoServiceImplTests {
     void createPersistsValidatedTodoAndReturnsGeneratedId() {
         LocalDateTime before = LocalDateTime.now();
 
-        Integer id = service.create(" 새 할일 ", null);
+        Integer id = service.create(" 새 할일 ", null, 1);
         Todo stored = repository.todos.get(id);
 
         assertThat(id).isEqualTo(1);
         assertThat(stored.getTitle()).isEqualTo("새 할일");
         assertThat(stored.getDetail()).isNull();
+        assertThat(stored.getAuthorId()).isEqualTo(1);
         assertThat(stored.getCreatedAt()).isBetween(before, LocalDateTime.now());
         assertThat(stored.getUpdatedAt()).isEqualTo(stored.getCreatedAt());
     }
 
     @Test
     void createDoesNotPersistInvalidTitle() {
-        assertThatThrownBy(() -> service.create(" ", "내용"))
+        assertThatThrownBy(() -> service.create(" ", "내용", 1))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThat(repository.todos).isEmpty();
     }
@@ -83,12 +84,13 @@ class TodoServiceImplTests {
         repository.todos.put(8, todo(8));
         LocalDateTime before = LocalDateTime.now();
 
-        service.update(7, " 수정 제목 ", "수정 내용");
+        service.update(7, " 수정 제목 ", "수정 내용", 1);
 
         Todo stored = repository.todos.get(7);
         assertThat(stored).extracting(Todo::getId, Todo::getTitle, Todo::getDetail, Todo::getCreatedAt)
                 .containsExactly(7, "수정 제목", "수정 내용", createdAt);
         assertThat(stored.getUpdatedAt()).isBetween(before, LocalDateTime.now());
+        assertThat(stored.getAuthorId()).isEqualTo(1);
         assertThat(repository.todos.get(8)).extracting(Todo::getTitle, Todo::getUpdatedAt)
                 .containsExactly("기존 제목", updatedAt);
     }
@@ -97,7 +99,7 @@ class TodoServiceImplTests {
     void updateDoesNotPersistInvalidTitle() {
         repository.todos.put(7, todo(7));
 
-        assertThatThrownBy(() -> service.update(7, "가".repeat(256), null))
+        assertThatThrownBy(() -> service.update(7, "가".repeat(256), null, 1))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThat(repository.todos.get(7)).extracting(Todo::getTitle, Todo::getUpdatedAt)
                 .containsExactly("기존 제목", updatedAt);
@@ -105,7 +107,7 @@ class TodoServiceImplTests {
 
     @Test
     void updateThrowsDomainExceptionWhenTodoIsMissing() {
-        assertThatThrownBy(() -> service.update(99, "수정 제목", null))
+        assertThatThrownBy(() -> service.update(99, "수정 제목", null, 1))
                 .isInstanceOf(TodoNotFoundException.class);
         assertThat(repository.todos).isEmpty();
     }
@@ -116,7 +118,7 @@ class TodoServiceImplTests {
         when(disappearingRepository.findById(7)).thenReturn(Optional.of(todo(7)));
         TodoService disappearingService = new TodoServiceImpl(disappearingRepository);
 
-        assertThatThrownBy(() -> disappearingService.update(7, "수정 제목", null))
+        assertThatThrownBy(() -> disappearingService.update(7, "수정 제목", null, 1))
                 .isInstanceOf(TodoNotFoundException.class);
     }
 
@@ -125,14 +127,14 @@ class TodoServiceImplTests {
         repository.todos.put(7, todo(7));
         repository.todos.put(8, todo(8));
 
-        service.deleteById(7);
+        service.deleteById(7, 1);
 
         assertThat(repository.todos).containsOnlyKeys(8);
     }
 
     @Test
     void deleteByIdThrowsDomainExceptionWhenNoRowIsDeleted() {
-        assertThatThrownBy(() -> service.deleteById(99))
+        assertThatThrownBy(() -> service.deleteById(99, 1))
                 .isInstanceOf(TodoNotFoundException.class);
     }
 
@@ -144,11 +146,11 @@ class TodoServiceImplTests {
         TodoService failingService = new TodoServiceImpl(failingRepository);
 
         assertThatThrownBy(() -> failingService.findById(7)).isSameAs(failure);
-        assertThatThrownBy(() -> failingService.update(7, "수정 제목", null)).isSameAs(failure);
+        assertThatThrownBy(() -> failingService.update(7, "수정 제목", null, 1)).isSameAs(failure);
     }
 
     private Todo todo(int id) {
-        return new Todo(id, "기존 제목", "기존 내용", createdAt, updatedAt);
+        return new Todo(id, "기존 제목", "기존 내용", createdAt, updatedAt, 1);
     }
 
     private static class MemoryRepository implements TodoRepository {
@@ -170,7 +172,7 @@ class TodoServiceImplTests {
         public Integer insert(Todo todo) {
             int id = ++sequence;
             todos.put(id, new Todo(id, todo.getTitle(), todo.getDetail(),
-                    todo.getCreatedAt(), todo.getUpdatedAt()));
+                    todo.getCreatedAt(), todo.getUpdatedAt(), todo.getAuthorId()));
             return id;
         }
 
@@ -180,8 +182,9 @@ class TodoServiceImplTests {
         }
 
         @Override
-        public int deleteById(Integer id) {
-            return todos.remove(id) == null ? 0 : 1;
+        public int deleteById(Integer id, Integer authorId) {
+            Todo stored = todos.get(id);
+            return stored != null && stored.isOwnedBy(authorId) && todos.remove(id) != null ? 1 : 0;
         }
     }
 }

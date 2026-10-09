@@ -18,6 +18,24 @@ public final class Todo {
     private final String detail;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
+    private final Integer authorId;
+
+    /** 작성자 없는 기존 데이터를 복원한다. 해당 항목은 수정·삭제할 수 없다. */
+    public Todo(Integer id, String title, String detail, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this(id, title, detail, createdAt, updatedAt, null);
+    }
+
+    public static Todo create(String title, String detail, Integer authorId) {
+        if (authorId == null || authorId <= 0) {
+            throw new IllegalArgumentException("작성자가 필요합니다.");
+        }
+        Todo validated = create(title, detail);
+        return new Todo(null, validated.title, validated.detail, validated.createdAt, validated.updatedAt, authorId);
+    }
+
+    public boolean isOwnedBy(Integer memberId) {
+        return authorId != null && authorId.equals(memberId);
+    }
 
     /**
      * 등록 전 기본키는 비워 두고 등록일과 수정일을 같은 서버 시간으로 설정한다.
@@ -33,7 +51,7 @@ public final class Todo {
      */
     public Todo update(String title, String detail) {
         String normalizedTitle = normalizeTitle(title);
-        return new Todo(id, normalizedTitle, detail, createdAt, LocalDateTime.now());
+        return new Todo(id, normalizedTitle, detail, createdAt, LocalDateTime.now(), authorId);
     }
 
     private static String normalizeTitle(String title) {

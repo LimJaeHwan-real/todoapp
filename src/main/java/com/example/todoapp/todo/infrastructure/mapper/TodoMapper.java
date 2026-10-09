@@ -19,5 +19,5 @@ public interface TodoMapper {
 
     int update(TodoRow row);
 
-    int deleteById(@Param("id") Integer id);
+    int deleteById(@Param("id") Integer id, @Param("authorId") Integer authorId);
 }

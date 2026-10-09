@@ -1,6 +1,7 @@
 package com.example.todoapp.todo.application.controller;
 
 import com.example.todoapp.todo.domain.service.TodoNotFoundException;
+import com.example.todoapp.todo.domain.service.TodoAccessDeniedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.CannotGetJdbcConnectionException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -14,6 +15,11 @@ import java.sql.SQLException;
 
 @ControllerAdvice(assignableTypes = TodoController.class)
 public class TodoExceptionHandler {
+
+    @ExceptionHandler(TodoAccessDeniedException.class)
+    public ModelAndView forbidden() {
+        return error("403", HttpStatus.FORBIDDEN);
+    }
 
     @ExceptionHandler(TodoNotFoundException.class)
     public ModelAndView notFound() {

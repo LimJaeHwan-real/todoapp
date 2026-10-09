@@ -1,12 +1,20 @@
 package com.example.todoapp.todo.application.controller;
 
+import com.example.todoapp.user.infrastructure.security.SecurityConfiguration;
 import com.example.todoapp.todo.domain.model.Todo;
 import com.example.todoapp.todo.domain.service.TodoNotFoundException;
 import com.example.todoapp.todo.domain.service.TodoService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import com.example.todoapp.user.domain.repository.UserRepository;
+import com.example.todoapp.user.domain.model.User;
+import java.util.Optional;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.jdbc.CannotGetJdbcConnectionException;
@@ -18,11 +26,13 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
@@ -32,7 +42,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest
+@WebMvcTest(TodoController.class)
+@Import(SecurityConfiguration.class)
+@WithMockUser
 class TodoControllerTests {
 
     @Autowired
@@ -41,11 +53,23 @@ class TodoControllerTests {
     @MockitoBean
     private TodoService service;
 
+    @MockitoBean
+    private UserDetailsService userDetailsService;
+
+    @MockitoBean
+    private UserRepository users;
+
+    @BeforeEach
+    void currentUser() {
+        when(users.findByUsername("user")).thenReturn(Optional.of(new User(1, "user", null)));
+        when(service.findByIdForEdit(7, 1)).thenAnswer(call -> service.findById(7));
+    }
+
     private final LocalDateTime created = LocalDateTime.of(2026, 10, 5, 9, 0);
     private final LocalDateTime updated = LocalDateTime.of(2026, 10, 6, 10, 30);
 
     private Todo todo(String title, String detail) {
-        return new Todo(7, title, detail, created, updated);
+        return new Todo(7, title, detail, created, updated, 1);
     }
 
     @Test
@@ -115,25 +139,25 @@ class TodoControllerTests {
     @ValueSource(ints = {1, 255})
     void createAcceptsDomainBoundariesAndRedirectsToGeneratedId(int length) throws Exception {
         String title = "가".repeat(length);
-        when(service.create(title, "내용")).thenReturn(42);
-        mvc.perform(post("/todos").param("title", " " + title + " ").param("detail", "내용"))
+        when(service.create(title, "내용", 1)).thenReturn(42);
+        mvc.perform(post("/todos").with(csrf()).param("title", " " + title + " ").param("detail", "내용"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/todos/42"));
-        verify(service).create(title, "내용");
+        verify(service).create(title, "내용", 1);
     }
 
     @Test
     void createAccepts255UnicodeCodePoints() throws Exception {
         String title = "😀".repeat(255);
-        when(service.create(title, "")).thenReturn(42);
-        mvc.perform(post("/todos").param("title", title).param("detail", ""))
+        when(service.create(title, "", 1)).thenReturn(42);
+        mvc.perform(post("/todos").with(csrf()).param("title", title).param("detail", ""))
                 .andExpect(redirectedUrl("/todos/42"));
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"", " ", "\t\n"})
     void createRejectsBlankTitleAndPreservesInput(String title) throws Exception {
-        mvc.perform(post("/todos").param("title", title).param("detail", "<b>입력 유지</b>"))
+        mvc.perform(post("/todos").with(csrf()).param("title", title).param("detail", "<b>입력 유지</b>"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("todos/form"))
                 .andExpect(model().attributeHasFieldErrors("todoForm", "title"))
@@ -146,9 +170,9 @@ class TodoControllerTests {
 
     @Test
     void createRejectsMissingAndOverlongTitles() throws Exception {
-        mvc.perform(post("/todos").param("detail", "내용"))
+        mvc.perform(post("/todos").with(csrf()).param("detail", "내용"))
                 .andExpect(model().attributeHasFieldErrors("todoForm", "title"));
-        mvc.perform(post("/todos").param("title", "가".repeat(256)))
+        mvc.perform(post("/todos").with(csrf()).param("title", "가".repeat(256)))
                 .andExpect(model().attributeHasFieldErrors("todoForm", "title"))
                 .andExpect(xpath("//input[@name='title']/@value").string("가".repeat(256)));
         verifyNoInteractions(service);
@@ -157,16 +181,16 @@ class TodoControllerTests {
     @Test
     void updateRedirectsToTheSameDetail() throws Exception {
         when(service.findById(7)).thenReturn(todo("기존 제목", "내용"));
-        mvc.perform(post("/todos/7/edit").param("title", " 수정 제목 ").param("detail", "수정 내용"))
+        mvc.perform(post("/todos/7/edit").with(csrf()).param("title", " 수정 제목 ").param("detail", "수정 내용"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/todos/7"));
-        verify(service).update(7, "수정 제목", "수정 내용");
+        verify(service).update(7, "수정 제목", "수정 내용", 1);
     }
 
     @Test
     void updateInvalidTitleKeepsSubmittedValuesAndEditAction() throws Exception {
         when(service.findById(7)).thenReturn(todo("기존 제목", "내용"));
-        mvc.perform(post("/todos/7/edit").param("title", " ").param("detail", "수정 내용"))
+        mvc.perform(post("/todos/7/edit").with(csrf()).param("title", " ").param("detail", "수정 내용"))
                 .andExpect(status().isOk())
                 .andExpect(model().attributeHasFieldErrors("todoForm", "title"))
                 .andExpect(xpath("//form[@action='/todos/7/edit']").exists())
@@ -175,9 +199,9 @@ class TodoControllerTests {
 
     @Test
     void deleteRedirectsToListAndGetCannotDelete() throws Exception {
-        mvc.perform(post("/todos/7/delete"))
+        mvc.perform(post("/todos/7/delete").with(csrf()))
                 .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/todos"));
-        verify(service).deleteById(7);
+        verify(service).deleteById(7, 1);
         clearInvocations(service);
         mvc.perform(get("/todos/7/delete")).andExpect(status().isMethodNotAllowed());
         verifyNoInteractions(service);
@@ -188,25 +212,25 @@ class TodoControllerTests {
     void malformedIdsRender400ForEveryIdRoute(String id) throws Exception {
         mvc.perform(get("/todos/" + id)).andExpect(status().isBadRequest()).andExpect(view().name("error/400"));
         mvc.perform(get("/todos/" + id + "/edit")).andExpect(status().isBadRequest());
-        mvc.perform(post("/todos/" + id + "/edit").param("title", "제목")).andExpect(status().isBadRequest());
-        mvc.perform(post("/todos/" + id + "/delete")).andExpect(status().isBadRequest());
+        mvc.perform(post("/todos/" + id + "/edit").with(csrf()).param("title", "제목")).andExpect(status().isBadRequest());
+        mvc.perform(post("/todos/" + id + "/delete").with(csrf())).andExpect(status().isBadRequest());
     }
 
     @Test
     void absentTodoRenders404ForReadEditAndDelete() throws Exception {
         when(service.findById(7)).thenThrow(new TodoNotFoundException(7));
-        doThrow(new TodoNotFoundException(7)).when(service).deleteById(7);
+        doThrow(new TodoNotFoundException(7)).when(service).deleteById(7, 1);
         mvc.perform(get("/todos/7")).andExpect(status().isNotFound()).andExpect(view().name("error/404"));
         mvc.perform(get("/todos/7/edit")).andExpect(status().isNotFound());
-        mvc.perform(post("/todos/7/edit").param("title", " ")).andExpect(status().isNotFound());
-        mvc.perform(post("/todos/7/delete")).andExpect(status().isNotFound());
+        mvc.perform(post("/todos/7/edit").with(csrf()).param("title", " ")).andExpect(status().isNotFound());
+        mvc.perform(post("/todos/7/delete").with(csrf())).andExpect(status().isNotFound());
     }
 
     @Test
     void updateThatDisappearsDuringWriteRenders404() throws Exception {
         when(service.findById(7)).thenReturn(todo("제목", "내용"));
-        doThrow(new TodoNotFoundException(7)).when(service).update(7, "수정 제목", "수정 내용");
-        mvc.perform(post("/todos/7/edit").param("title", "수정 제목").param("detail", "수정 내용"))
+        doThrow(new TodoNotFoundException(7)).when(service).update(7, "수정 제목", "수정 내용", 1);
+        mvc.perform(post("/todos/7/edit").with(csrf()).param("title", "수정 제목").param("detail", "수정 내용"))
                 .andExpect(status().isNotFound()).andExpect(view().name("error/404"));
     }
 
@@ -221,26 +245,26 @@ class TodoControllerTests {
 
     @Test
     void nestedConnectionFailureDuringWriteRenders503() throws Exception {
-        when(service.create(anyString(), anyString())).thenThrow(new CannotCreateTransactionException("internal transaction marker",
+        when(service.create(anyString(), anyString(), eq(1))).thenThrow(new CannotCreateTransactionException("internal transaction marker",
                 new CannotGetJdbcConnectionException("internal connection marker")));
-        mvc.perform(post("/todos").param("title", "정상 제목").param("detail", "내용"))
+        mvc.perform(post("/todos").with(csrf()).param("title", "정상 제목").param("detail", "내용"))
                 .andExpect(status().isServiceUnavailable()).andExpect(view().name("error/503"))
                 .andExpect(content().string(not(containsString("internal"))));
     }
 
     @Test
     void transactionConnectionFailureWithSqlState08Renders503() throws Exception {
-        when(service.create(anyString(), anyString())).thenThrow(new CannotCreateTransactionException("internal transaction marker",
+        when(service.create(anyString(), anyString(), eq(1))).thenThrow(new CannotCreateTransactionException("internal transaction marker",
                 new SQLException("internal connection marker", "08001")));
-        mvc.perform(post("/todos").param("title", "정상 제목").param("detail", "내용"))
+        mvc.perform(post("/todos").with(csrf()).param("title", "정상 제목").param("detail", "내용"))
                 .andExpect(status().isServiceUnavailable()).andExpect(view().name("error/503"))
                 .andExpect(content().string(not(containsString("internal"))));
     }
 
     @Test
     void otherInfrastructureFailuresAreNeither503NorTitleErrors() throws Exception {
-        when(service.create(anyString(), anyString())).thenThrow(new IllegalArgumentException("internal mapper marker"));
-        mvc.perform(post("/todos").param("title", "정상 제목").param("detail", "내용"))
+        when(service.create(anyString(), anyString(), eq(1))).thenThrow(new IllegalArgumentException("internal mapper marker"));
+        mvc.perform(post("/todos").with(csrf()).param("title", "정상 제목").param("detail", "내용"))
                 .andExpect(status().isInternalServerError()).andExpect(content().string(not(containsString("internal"))));
         when(service.findAll()).thenThrow(new DataAccessResourceFailureException("internal non-connection marker"));
         mvc.perform(get("/todos"))

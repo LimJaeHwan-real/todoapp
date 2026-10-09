@@ -10,6 +10,7 @@
         header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
         h1{margin:0}a{color:#1d4ed8}a:focus-visible{outline:3px solid #2563eb;outline-offset:4px}
         .button{display:inline-block;background:#1d4ed8;color:white;text-decoration:none;padding:10px 16px;border-radius:6px}
+        button{font:inherit;border:0;cursor:pointer}button:focus-visible{outline:3px solid #2563eb;outline-offset:4px}
         ul{list-style:none;padding:0;margin:24px 0 0}li{padding:18px 0;border-top:1px solid #dbe1e8}
         li a{font-weight:600;overflow-wrap:anywhere}time{display:block;font-size:.9rem;color:#526175}
         .empty{margin-top:32px;color:#526175}@media(max-width:800px){main{margin:16px;padding:20px}}
@@ -18,6 +19,7 @@
 <body>
 <main>
     <header><h1>할일 목록</h1><a class="button" th:href="@{/todos/new}">새 할일 등록</a></header>
+    <form th:action="@{/logout}" method="post"><button class="button" type="submit">로그아웃</button></form>
     <p class="empty" th:if="${#lists.isEmpty(todos)}">등록된 할일이 없습니다. 새 할일을 등록해 보세요.</p>
     <ul th:unless="${#lists.isEmpty(todos)}">
         <li th:each="todo : ${todos}">

@@ -42,12 +42,12 @@ public class TodoRepositoryImpl implements TodoRepository {
     }
 
     @Override
-    public int deleteById(Integer id) {
-        return todoMapper.deleteById(id);
+    public int deleteById(Integer id, Integer authorId) {
+        return todoMapper.deleteById(id, authorId);
     }
 
     private static Todo toDomain(TodoRow row) {
-        return new Todo(row.getId(), row.getTitle(), row.getDetail(), row.getCreatedAt(), row.getUpdatedAt());
+        return new Todo(row.getId(), row.getTitle(), row.getDetail(), row.getCreatedAt(), row.getUpdatedAt(), row.getAuthorId());
     }
 
     private static TodoRow toRow(Todo todo) {
@@ -57,6 +57,7 @@ public class TodoRepositoryImpl implements TodoRepository {
         row.setDetail(todo.getDetail());
         row.setCreatedAt(todo.getCreatedAt());
         row.setUpdatedAt(todo.getUpdatedAt());
+        row.setAuthorId(todo.getAuthorId());
         return row;
     }
 }

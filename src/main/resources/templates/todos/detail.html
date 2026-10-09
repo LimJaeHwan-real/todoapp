@@ -28,11 +28,12 @@
         <dt>등록일</dt><dd th:text="${todo.createdAt != null ? #temporals.format(todo.createdAt, 'yyyy-MM-dd HH:mm') : '—'}">등록일</dd>
         <dt>수정일</dt><dd th:text="${todo.updatedAt != null ? #temporals.format(todo.updatedAt, 'yyyy-MM-dd HH:mm') : '—'}">수정일</dd>
     </dl>
-    <div class="actions">
+    <div class="actions" th:if="${canEdit}">
         <a class="button" th:href="@{/todos/{id}/edit(id=${todo.id})}">수정</a>
         <button type="button" onclick="document.getElementById('delete-dialog').showModal();">삭제</button>
     </div>
-    <dialog id="delete-dialog" aria-labelledby="delete-dialog-title" aria-describedby="delete-dialog-description">
+    <p th:unless="${canEdit}">본인이 작성한 항목만 수정·삭제할 수 있습니다.</p>
+    <dialog th:if="${canEdit}" id="delete-dialog" aria-labelledby="delete-dialog-title" aria-describedby="delete-dialog-description">
         <h2 id="delete-dialog-title">할일 삭제 확인</h2>
         <p id="delete-dialog-description">이 할일을 삭제하시겠습니까? 삭제한 할일은 되돌릴 수 없습니다.</p>
         <form method="post" th:action="@{/todos/{id}/delete(id=${todo.id})}">
