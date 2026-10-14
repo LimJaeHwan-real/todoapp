@@ -11,6 +11,16 @@ import static org.mockito.Mockito.when;
 
 class DatabaseUserDetailsServiceTests {
     @Test
+    void socialOnlyAccountCannotUsePasswordLogin() {
+        var repository = mock(UserRepository.class);
+        when(repository.findByUsername("google_member")).thenReturn(java.util.Optional.of(
+                new com.example.todoapp.user.domain.model.User(1, "google_member", null)));
+        assertThatThrownBy(() -> new DatabaseUserDetailsService(repository).loadUserByUsername("google_member"))
+                .isInstanceOf(org.springframework.security.core.userdetails.UsernameNotFoundException.class)
+                .hasNoCause();
+    }
+
+    @Test
     void loginDatabaseFailuresHideSqlAndConnectionDetailsFromAuthenticationFilter() {
         var repository = mock(UserRepository.class);
         when(repository.findByUsername("member"))

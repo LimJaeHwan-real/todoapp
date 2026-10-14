@@ -2,7 +2,15 @@
 CREATE TABLE IF NOT EXISTS users (
     id serial PRIMARY KEY,
     username varchar(50) NOT NULL UNIQUE,
-    password_hash varchar(100) NOT NULL,
+    password_hash varchar(100),
+    provider varchar(10),
+    provider_user_id varchar(255),
+    CONSTRAINT uq_users_social_identity UNIQUE (provider, provider_user_id),
+    CONSTRAINT users_login_method CHECK (
+        (provider IS NULL AND provider_user_id IS NULL AND password_hash IS NOT NULL)
+        OR (provider IS NOT NULL AND provider IN ('google', 'naver') AND provider_user_id IS NOT NULL
+            AND length(provider_user_id) > 0 AND password_hash IS NULL)
+    ),
     CONSTRAINT users_bcrypt_hash CHECK (
         password_hash ~ '^\$2[aby]\$[0-9]{2}\$[./A-Za-z0-9]{53}$'
     )

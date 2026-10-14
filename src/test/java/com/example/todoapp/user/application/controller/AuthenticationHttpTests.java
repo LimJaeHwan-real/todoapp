@@ -3,7 +3,7 @@ package com.example.todoapp.user.application.controller;
 import com.example.todoapp.todo.domain.model.Todo;
 import com.example.todoapp.todo.domain.repository.TodoRepository;
 import com.example.todoapp.user.domain.model.User;
-import com.example.todoapp.user.domain.repository.UserRepository;
+import com.example.todoapp.user.infrastructure.repository.UserRepositoryImpl;
 import com.example.todoapp.user.domain.service.DuplicateUsernameException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
@@ -55,7 +55,7 @@ class AuthenticationHttpTests {
 
     // DB 저장 경계만 대체하고 실제 인증 필터·서비스·화면·HTTP 서버는 유지한다.
     @MockitoBean
-    private UserRepository repository;
+    private UserRepositoryImpl repository;
 
     @MockitoBean
     private TodoRepository todoRepository;

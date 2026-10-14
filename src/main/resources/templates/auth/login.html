@@ -12,6 +12,11 @@
         button{font:inherit;border:0;background:#1d4ed8;color:white;padding:10px 16px;border-radius:6px;cursor:pointer}
         a{color:#1d4ed8}.actions{display:flex;align-items:center;gap:16px;margin-top:24px}.error{color:#b91c1c}
         a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid #2563eb;outline-offset:3px}
+        .social-login{display:grid;gap:12px;margin-top:28px;padding-top:24px;border-top:1px solid #dbe1e8}
+        .social-login a,.social-login button{display:block;box-sizing:border-box;width:100%;text-align:center;text-decoration:none;padding:12px;border-radius:6px;font-weight:600}
+        .naver{background:#03c75a;color:#111827}.google{background:white;color:#182334;border:1px solid #8492a6}
+        .social-login button:disabled{cursor:not-allowed;background:#eef1f5;color:#526175;border:1px solid #8492a6}
+        .hint{font-size:.9rem;color:#526175;margin:0}
         @media(max-width:520px){main{margin:16px;padding:20px}}
     </style>
 </head>
@@ -21,6 +26,7 @@
     <p th:if="${param.registered}" role="status">회원가입이 완료되었습니다. 로그인해 주세요.</p>
     <p th:if="${param.logout}" role="status">로그아웃되었습니다.</p>
     <p th:if="${param.error}" class="error" role="alert">로그인할 수 없습니다. 아이디와 비밀번호를 확인하거나 잠시 후 다시 시도해 주세요.</p>
+    <p th:if="${param.socialError}" class="error" role="alert">간편 로그인을 완료하지 못했습니다. 다시 시도해 주세요.</p>
     <form th:action="@{/login}" method="post">
         <label for="username">아이디</label>
         <input id="username" name="username" type="text" autocomplete="username" required="required" maxlength="50" />
@@ -28,6 +34,13 @@
         <input id="password" name="password" type="password" autocomplete="current-password" required="required" />
         <div class="actions"><button type="submit">로그인</button><a th:href="@{/signup}">회원가입</a></div>
     </form>
+    <section class="social-login" aria-label="간편 로그인">
+        <a th:if="${naverLoginAvailable}" class="naver" th:href="@{/oauth2/authorization/naver}">네이버로 로그인</a>
+        <button th:unless="${naverLoginAvailable}" type="button" disabled="disabled">네이버로 로그인</button>
+        <a th:if="${googleLoginAvailable}" class="google" th:href="@{/oauth2/authorization/google}">구글로 로그인</a>
+        <button th:unless="${googleLoginAvailable}" type="button" disabled="disabled">구글로 로그인</button>
+        <p class="hint" th:if="${!naverLoginAvailable or !googleLoginAvailable}">사용할 수 없는 간편 로그인은 준비 중입니다.</p>
+    </section>
 </main>
 </body>
 </html>

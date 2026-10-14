@@ -6,6 +6,8 @@ import com.example.todoapp.user.domain.service.UserRegistrationService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.TransactionException;
 import org.springframework.stereotype.Controller;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 public class AuthenticationController {
 
     private final UserRegistrationService registrationService;
+    private final ObjectProvider<ClientRegistrationRepository> registrations;
 
     @InitBinder("signupForm")
     public void signupFields(WebDataBinder binder) {
@@ -29,7 +32,10 @@ public class AuthenticationController {
     }
 
     @GetMapping("/login")
-    public String login() {
+    public String login(Model model) {
+        var clients = registrations.getIfAvailable();
+        model.addAttribute("naverLoginAvailable", clients != null && clients.findByRegistrationId("naver") != null);
+        model.addAttribute("googleLoginAvailable", clients != null && clients.findByRegistrationId("google") != null);
         return "auth/login";
     }
 

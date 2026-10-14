@@ -21,6 +21,9 @@ public class DatabaseUserDetailsService implements UserDetailsService {
         try {
             var account = userRepository.findByUsername(username)
                     .orElseThrow(() -> new UsernameNotFoundException("로그인 정보를 확인해 주세요."));
+            if (account.getPasswordHash() == null) {
+                throw new UsernameNotFoundException("로그인 정보를 확인해 주세요.");
+            }
             return User.withUsername(account.getUsername())
                     .password(account.getPasswordHash()).roles("USER").build();
         } catch (DataAccessException exception) {

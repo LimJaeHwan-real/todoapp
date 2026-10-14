@@ -13,4 +13,12 @@
     <insert id="insert">
         INSERT INTO users (username, password_hash) VALUES (#{username}, #{passwordHash})
     </insert>
+    <!-- 1개의 원자적 쿼리로 동시 첫 로그인과 반복 로그인 모두 동일한 회원을 반환한다. -->
+    <select id="findOrCreateSocialUser" resultMap="userRow" affectData="true" flushCache="true">
+        INSERT INTO users (username, password_hash, provider, provider_user_id)
+        VALUES (#{username}, NULL, #{provider}, #{subject})
+        ON CONFLICT (provider, provider_user_id)
+        DO UPDATE SET provider = EXCLUDED.provider
+        RETURNING id, username, password_hash
+    </select>
 </mapper>

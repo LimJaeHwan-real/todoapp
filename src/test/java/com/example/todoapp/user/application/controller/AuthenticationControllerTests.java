@@ -81,7 +81,9 @@ class AuthenticationControllerTests {
         mvc.perform(get("/login"))
                 .andExpect(status().isOk())
                 .andExpect(xpath("//form[@action='/login'][@method='post']").exists())
-                .andExpect(xpath("//form/input[@name='_csrf']").exists());
+                .andExpect(xpath("//form/input[@name='_csrf']").exists())
+                .andExpect(xpath("//button[@disabled][contains(.,'네이버로 로그인')]").exists())
+                .andExpect(xpath("//button[@disabled][contains(.,'구글로 로그인')]").exists());
     }
 
     @Test
