@@ -2,6 +2,7 @@ package com.example.todoapp.todo.infrastructure.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import com.example.todoapp.todo.domain.model.TodoCursor;
 
 import java.util.List;
 
@@ -10,6 +11,13 @@ import java.util.List;
  */
 @Mapper
 public interface TodoMapper {
+
+    long count();
+
+    List<TodoRow> findPage(@Param("limit") int limit, @Param("offset") long offset);
+
+    List<TodoRow> search(@Param("pattern") String pattern, @Param("cursor") TodoCursor cursor,
+                        @Param("backwards") boolean backwards, @Param("limit") int limit);
 
     List<TodoRow> findAll();
 

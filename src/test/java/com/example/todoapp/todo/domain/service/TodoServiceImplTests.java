@@ -25,6 +25,17 @@ class TodoServiceImplTests {
     private final LocalDateTime updatedAt = LocalDateTime.of(2026, 10, 5, 10, 0);
 
     @Test
+    void pagesContainTenItemsWithoutOverlapAndKeepLastRemainder() {
+        for (int id = 1; id <= 21; id++) {
+            repository.todos.put(id, todo(id));
+        }
+        assertThat(service.count()).isEqualTo(21);
+        assertThat(service.findPage(1)).extracting(Todo::getId).containsExactly(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        assertThat(service.findPage(2)).extracting(Todo::getId).containsExactly(11, 12, 13, 14, 15, 16, 17, 18, 19, 20);
+        assertThat(service.findPage(3)).extracting(Todo::getId).containsExactly(21);
+    }
+
+    @Test
     void findAllReturnsEmptyListWhenNoTodosExist() {
         assertThat(service.findAll()).isEmpty();
     }
@@ -157,6 +168,22 @@ class TodoServiceImplTests {
 
         private final Map<Integer, Todo> todos = new LinkedHashMap<>();
         private int sequence;
+
+        @Override
+        public List<Todo> search(String keyword, com.example.todoapp.todo.domain.model.TodoCursor cursor,
+                                 boolean backwards, int limit) {
+            throw new UnsupportedOperationException("Search is covered by TodoSearchServiceTests");
+        }
+
+        @Override
+        public long count() {
+            return todos.size();
+        }
+
+        @Override
+        public List<Todo> findPage(int limit, long offset) {
+            return todos.values().stream().skip(offset).limit(limit).toList();
+        }
 
         @Override
         public List<Todo> findAll() {

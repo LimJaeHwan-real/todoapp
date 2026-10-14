@@ -1,8 +1,12 @@
 package com.example.todoapp.todo.application.controller;
 
 import com.example.todoapp.todo.application.form.TodoForm;
+import com.example.todoapp.todo.application.view.TodoCursorCodec;
 import com.example.todoapp.todo.application.view.TodoView;
 import com.example.todoapp.todo.domain.model.Todo;
+import com.example.todoapp.todo.domain.model.TodoCursor;
+import com.example.todoapp.todo.domain.model.TodoSlice;
+import com.example.todoapp.todo.domain.model.TodoSearchKeyword;
 import com.example.todoapp.todo.domain.service.TodoService;
 import com.example.todoapp.todo.domain.service.TodoAccessDeniedException;
 import com.example.todoapp.user.domain.repository.UserRepository;
@@ -18,6 +22,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import java.security.Principal;
 
@@ -35,8 +40,43 @@ public class TodoController {
     }
 
     @GetMapping
-    public String list(Model model) {
-        model.addAttribute("todos", todoService.findAll().stream().map(TodoView::from).toList());
+    public String list(@RequestParam(defaultValue = "") String q,
+                       @RequestParam(required = false) String after,
+                       @RequestParam(required = false) String before, Model model) {
+        TodoCursor cursor;
+        try {
+            if (after != null && before != null) {
+                throw new IllegalArgumentException();
+            }
+            cursor = after != null ? TodoCursorCodec.decode(after)
+                    : before != null ? TodoCursorCodec.decode(before) : null;
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+        String keyword;
+        model.addAttribute("q", q.strip());
+        model.addAttribute("previousCursor", null);
+        model.addAttribute("nextCursor", null);
+        model.addAttribute("hasCursor", cursor != null);
+        try {
+            keyword = TodoSearchKeyword.normalize(q);
+        } catch (IllegalArgumentException exception) {
+            model.addAttribute("searchError", exception.getMessage());
+            model.addAttribute("todos", java.util.List.of());
+            return "todos/list";
+        }
+        TodoSlice slice = todoService.search(keyword, cursor, before != null);
+        model.addAttribute("todos", slice.items().stream().map(TodoView::from).toList());
+        if (!slice.items().isEmpty()) {
+            boolean hasPrevious = before != null ? slice.hasMore() : cursor != null;
+            boolean hasNext = before != null ? cursor != null : slice.hasMore();
+            if (hasPrevious) {
+                model.addAttribute("previousCursor", TodoCursorCodec.encode(TodoCursor.from(slice.items().getFirst())));
+            }
+            if (hasNext) {
+                model.addAttribute("nextCursor", TodoCursorCodec.encode(TodoCursor.from(slice.items().getLast())));
+            }
+        }
         return "todos/list";
     }
 

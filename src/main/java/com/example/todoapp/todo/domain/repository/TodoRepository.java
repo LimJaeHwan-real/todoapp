@@ -1,6 +1,7 @@
 package com.example.todoapp.todo.domain.repository;
 
 import com.example.todoapp.todo.domain.model.Todo;
+import com.example.todoapp.todo.domain.model.TodoCursor;
 
 import java.util.List;
 import java.util.Optional;
@@ -9,6 +10,14 @@ import java.util.Optional;
  * 할일 저장소의 계약. 구현체와 DB 매핑은 인프라 계층에서 제공한다.
  */
 public interface TodoRepository {
+
+    long count();
+
+    /** 기존 정렬 순서로 offset개를 건너뛰고 limit개까지 조회한다. */
+    List<Todo> findPage(int limit, long offset);
+
+    /** 제목 부분 검색. 이전 방향이면 등록일·ID 오름차순으로 가장 가까운 결과부터 반환한다. */
+    List<Todo> search(String keyword, TodoCursor cursor, boolean backwards, int limit);
 
     /**
      * 등록일 내림차순, 기본키 내림차순으로 조회한다. 등록일이 없는 항목은 뒤에 둔다.

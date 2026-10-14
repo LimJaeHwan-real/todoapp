@@ -26,3 +26,9 @@ CREATE TABLE IF NOT EXISTS todos (
     author_id integer,
     CONSTRAINT fk_todos_author FOREIGN KEY (author_id) REFERENCES users(id)
 );
+
+-- 신규 DB 초기화용. 기존 DB에는 sql/add-todo-search.sql을 별도로 적용한다.
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+CREATE INDEX IF NOT EXISTS idx_todos_title_trgm ON todos USING GIN (todo public.gin_trgm_ops);
+-- 날짜가 없는 글은 가장 오래된 위치에 두고, 복합 비교로 커서 위치부터 읽는다.
+CREATE INDEX IF NOT EXISTS idx_todos_created_id ON todos ((COALESCE(created_at, '-infinity'::timestamp)) DESC, id DESC);

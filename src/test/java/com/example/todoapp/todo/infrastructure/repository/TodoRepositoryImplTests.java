@@ -27,6 +27,24 @@ class TodoRepositoryImplTests {
     private final LocalDateTime updatedAt = LocalDateTime.of(2026, 10, 6, 10, 30);
 
     @Test
+    void searchEscapesWildcardCharactersAndKeepsResultOrder() {
+        when(mapper.search("%100!%!_!!%", null, false, 11)).thenReturn(List.of(row(7, "100%_!")));
+        assertThat(repository.search("100%_!", null, false, 11)).extracting(Todo::getTitle).containsExactly("100%_!");
+        when(mapper.search(null, null, false, 11)).thenReturn(List.of(row(8, "all")));
+        assertThat(repository.search("", null, false, 11)).extracting(Todo::getId).containsExactly(8);
+    }
+
+    @Test
+    void pagePreservesMapperOrderAndFields() {
+        when(mapper.count()).thenReturn(12L);
+        when(mapper.findPage(10, 10L)).thenReturn(List.of(row(2, "두 번째"), row(1, "첫 번째")));
+        assertThat(repository.count()).isEqualTo(12);
+        assertThat(repository.findPage(10, 10L)).extracting(Todo::getId, Todo::getTitle, Todo::getCreatedAt)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple(2, "두 번째", createdAt),
+                        org.assertj.core.groups.Tuple.tuple(1, "첫 번째", createdAt));
+    }
+
+    @Test
     void findAllPreservesFieldsAndMapperOrder() {
         when(mapper.findAll()).thenReturn(List.of(row(2, "두 번째"), row(1, "첫 번째")));
 

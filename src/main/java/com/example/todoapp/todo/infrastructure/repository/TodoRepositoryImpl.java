@@ -1,6 +1,7 @@
 package com.example.todoapp.todo.infrastructure.repository;
 
 import com.example.todoapp.todo.domain.model.Todo;
+import com.example.todoapp.todo.domain.model.TodoCursor;
 import com.example.todoapp.todo.domain.repository.TodoRepository;
 import com.example.todoapp.todo.infrastructure.mapper.TodoMapper;
 import com.example.todoapp.todo.infrastructure.mapper.TodoRow;
@@ -18,6 +19,24 @@ import java.util.Optional;
 public class TodoRepositoryImpl implements TodoRepository {
 
     private final TodoMapper todoMapper;
+
+    @Override
+    public List<Todo> search(String keyword, TodoCursor cursor, boolean backwards, int limit) {
+        String pattern = keyword.isEmpty() ? null
+                : "%" + keyword.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
+        return todoMapper.search(pattern, cursor, backwards, limit).stream()
+                .map(TodoRepositoryImpl::toDomain).toList();
+    }
+
+    @Override
+    public long count() {
+        return todoMapper.count();
+    }
+
+    @Override
+    public List<Todo> findPage(int limit, long offset) {
+        return todoMapper.findPage(limit, offset).stream().map(TodoRepositoryImpl::toDomain).toList();
+    }
 
     @Override
     public List<Todo> findAll() {

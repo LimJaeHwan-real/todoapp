@@ -42,7 +42,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(TodoController.class)
+@WebMvcTest(value = TodoController.class, properties = "spring.test.mockmvc.print=NONE")
 @Import(SecurityConfiguration.class)
 @WithMockUser
 class TodoControllerTests {
@@ -59,6 +59,9 @@ class TodoControllerTests {
     @MockitoBean
     private UserRepository users;
 
+    @MockitoBean
+    private org.springframework.security.oauth2.client.registration.ClientRegistrationRepository socialClients;
+
     @BeforeEach
     void currentUser() {
         when(users.findByUsername("user")).thenReturn(Optional.of(new User(1, "user", null)));
@@ -74,23 +77,93 @@ class TodoControllerTests {
 
     @Test
     void listRendersEmptyStateAndCreateLink() throws Exception {
-        when(service.findAll()).thenReturn(List.of());
+        when(service.search("", null, false)).thenReturn(new com.example.todoapp.todo.domain.model.TodoSlice(List.of(), false));
         mvc.perform(get("/todos"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("todos/list"))
                 .andExpect(content().string(containsString("등록된 할일이 없습니다")))
-                .andExpect(xpath("//a[@href='/todos/new']").exists());
+                .andExpect(xpath("//form[@role='search'][@method='get']").exists())
+                .andExpect(xpath("//a[@href='/todos/new']").exists())
+                .andExpect(xpath("//nav[@aria-label='목록 페이지']").doesNotExist());
+        verify(service, org.mockito.Mockito.never()).count();
+        verify(service, org.mockito.Mockito.never()).findPage(org.mockito.ArgumentMatchers.anyInt());
     }
 
     @Test
     void listEscapesTitlesAndLinksToDetailsInServiceOrder() throws Exception {
-        when(service.findAll()).thenReturn(List.of(todo("<script>alert(1)</script>", "내용"),
-                new Todo(2, "이전 할일", null, created, created)));
+        when(service.search("", null, false)).thenReturn(new com.example.todoapp.todo.domain.model.TodoSlice(
+                List.of(todo("<script>alert(1)</script>", "내용"), new Todo(2, "이전 할일", null, created, created)), false));
         mvc.perform(get("/todos"))
                 .andExpect(status().isOk())
                 .andExpect(xpath("//main//li[1]//a[@href='/todos/7']").string("<script>alert(1)</script>"))
                 .andExpect(xpath("//main//li[2]//a[@href='/todos/2']").string("이전 할일"))
                 .andExpect(content().string(not(containsString("<script>alert(1)</script>"))));
+    }
+
+    @Test
+    void searchPreservesKeywordAndShowsCursorLinkWithoutPageNumbers() throws Exception {
+        when(service.search("스프링", null, false)).thenReturn(new com.example.todoapp.todo.domain.model.TodoSlice(
+                List.of(todo("스프링 공부", null)), true));
+        mvc.perform(get("/todos").param("q", " 스프링 "))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//input[@name='q']/@value").string("스프링"))
+                .andExpect(xpath("//nav//a[@aria-label='다음 페이지'][contains(@href,'after=')][contains(@href,'q=')]").exists())
+                .andExpect(xpath("//nav//*[@aria-label='이전 페이지'][@aria-disabled='true']").exists())
+                .andExpect(xpath("//nav//*[contains(@href,'page=')]").doesNotExist());
+        verify(service, org.mockito.Mockito.never()).count();
+    }
+
+    @Test
+    void forwardAndBackwardRequestsUseDecodedCursorAndKeepSearch() throws Exception {
+        var cursor = new com.example.todoapp.todo.domain.model.TodoCursor(created, 7);
+        String value = com.example.todoapp.todo.application.view.TodoCursorCodec.encode(cursor);
+        var slice = new com.example.todoapp.todo.domain.model.TodoSlice(List.of(todo("스프링 공부", null)), false);
+        when(service.search("스프링", cursor, false)).thenReturn(slice);
+        when(service.search("스프링", cursor, true)).thenReturn(slice);
+        mvc.perform(get("/todos").param("q", "스프링").param("after", value))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//nav//a[@aria-label='이전 페이지'][contains(@href,'before=')]").exists())
+                .andExpect(xpath("//nav//*[@aria-label='다음 페이지'][@aria-disabled='true']").exists());
+        mvc.perform(get("/todos").param("q", "스프링").param("before", value))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//nav//a[@aria-label='다음 페이지'][contains(@href,'after=')]").exists())
+                .andExpect(xpath("//nav//*[@aria-label='이전 페이지'][@aria-disabled='true']").exists());
+    }
+
+    @Test
+    void emptySearchAndDeletedCursorPageHaveHelpfulRecoveryLinks() throws Exception {
+        when(service.search("없는검색어", null, false)).thenReturn(new com.example.todoapp.todo.domain.model.TodoSlice(List.of(), false));
+        mvc.perform(get("/todos").param("q", "없는검색어"))
+                .andExpect(content().string(containsString("검색 결과가 없습니다")));
+        var cursor = new com.example.todoapp.todo.domain.model.TodoCursor(null, 7);
+        when(service.search("", cursor, false)).thenReturn(new com.example.todoapp.todo.domain.model.TodoSlice(List.of(), false));
+        mvc.perform(get("/todos").param("after", com.example.todoapp.todo.application.view.TodoCursorCodec.encode(cursor)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("더 이상 표시할 결과가 없습니다")))
+                .andExpect(xpath("//nav//a[@aria-label='첫 페이지']").exists());
+    }
+
+    @Test
+    void twoCursorDirectionsCannotBeCombined() throws Exception {
+        mvc.perform(get("/todos").param("after", "a").param("before", "b"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void shortSearchShowsValidationWithoutQueryingTodos() throws Exception {
+        mvc.perform(get("/todos").param("q", "공부"))
+                .andExpect(status().isOk())
+                .andExpect(xpath("//input[@name='q']/@value").string("공부"))
+                .andExpect(content().string(containsString("3자 이상")));
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void malformedCursorReturns400WithoutQueryingTodos() throws Exception {
+        mvc.perform(get("/todos").param("after", "invalid-cursor"))
+                .andExpect(status().isBadRequest()).andExpect(view().name("error/400"));
+        verifyNoInteractions(service);
     }
 
     @Test
@@ -236,7 +309,7 @@ class TodoControllerTests {
 
     @Test
     void connectionFailureRenders503WithoutInternalExceptionDetails() throws Exception {
-        when(service.findAll()).thenThrow(new CannotGetJdbcConnectionException("internal connection marker", new SQLException("internal SQL marker")));
+        when(service.search("", null, false)).thenThrow(new CannotGetJdbcConnectionException("internal connection marker", new SQLException("internal SQL marker")));
         mvc.perform(get("/todos"))
                 .andExpect(status().isServiceUnavailable()).andExpect(view().name("error/503"))
                 .andExpect(content().string(not(containsString("internal"))))
@@ -266,7 +339,7 @@ class TodoControllerTests {
         when(service.create(anyString(), anyString(), eq(1))).thenThrow(new IllegalArgumentException("internal mapper marker"));
         mvc.perform(post("/todos").with(csrf()).param("title", "정상 제목").param("detail", "내용"))
                 .andExpect(status().isInternalServerError()).andExpect(content().string(not(containsString("internal"))));
-        when(service.findAll()).thenThrow(new DataAccessResourceFailureException("internal non-connection marker"));
+        when(service.search("", null, false)).thenThrow(new DataAccessResourceFailureException("internal non-connection marker"));
         mvc.perform(get("/todos"))
                 .andExpect(status().isInternalServerError()).andExpect(content().string(not(containsString("internal"))));
     }

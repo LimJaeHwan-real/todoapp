@@ -34,6 +34,16 @@ class TodoMapperTests {
     }
 
     @Test
+    void pageQueryBindsLimitAndOffsetAndKeepsLatestFirstOrder() {
+        BoundSql boundSql = statement("findPage").getBoundSql(Map.of("limit", 10, "offset", 10L));
+        assertThat(sql(boundSql)).isEqualTo("SELECT id, todo, detail, created_at, updated_at, author_id FROM todos "
+                + "ORDER BY created_at DESC NULLS LAST, id DESC LIMIT ? OFFSET ?");
+        assertThat(boundSql.getParameterMappings()).extracting(ParameterMapping::getProperty)
+                .containsExactly("limit", "offset");
+        assertThat(sql(statement("count").getBoundSql(null))).isEqualTo("SELECT COUNT(*) FROM todos");
+    }
+
+    @Test
     void findAllUsesPlannedSortOrderAndExplicitColumnMapping() {
         MappedStatement statement = statement("findAll");
 

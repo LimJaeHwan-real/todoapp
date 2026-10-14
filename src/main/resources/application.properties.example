@@ -8,4 +8,5 @@ spring.datasource.driver-class-name=org.postgresql.Driver
 
 # 기존 데이터베이스는 자동으로 초기화하지 않는다.
 # 기존 todos 테이블에는 sql/add-todo-author.sql을 별도로 적용한다.
+# 제목 검색 인덱스는 sql/add-todo-search.sql을 별도로 적용한다.
 spring.sql.init.mode=never

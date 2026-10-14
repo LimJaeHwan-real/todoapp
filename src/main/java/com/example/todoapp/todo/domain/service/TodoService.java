@@ -1,6 +1,8 @@
 package com.example.todoapp.todo.domain.service;
 
 import com.example.todoapp.todo.domain.model.Todo;
+import com.example.todoapp.todo.domain.model.TodoCursor;
+import com.example.todoapp.todo.domain.model.TodoSlice;
 
 import java.util.List;
 
@@ -8,6 +10,12 @@ import java.util.List;
  * 할일의 조회와 생성·수정·삭제 기능을 제공한다.
  */
 public interface TodoService {
+
+    long count();
+
+    List<Todo> findPage(int page);
+
+    TodoSlice search(String keyword, TodoCursor cursor, boolean backwards);
 
     List<Todo> findAll();
 

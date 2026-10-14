@@ -12,10 +12,49 @@
         <result column="author_id" property="authorId"/>
     </resultMap>
 
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM todos
+    </select>
+
+    <select id="findPage" resultMap="todoRow">
+        SELECT id, todo, detail, created_at, updated_at, author_id
+        FROM todos
+        ORDER BY created_at DESC NULLS LAST, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
     <select id="findAll" resultMap="todoRow">
         SELECT id, todo, detail, created_at, updated_at, author_id
         FROM todos
         ORDER BY created_at DESC NULLS LAST, id DESC
+    </select>
+
+    <select id="search" resultMap="todoRow">
+        SELECT id, todo, created_at, updated_at, author_id
+        FROM todos
+        <where>
+            <if test="pattern != null">
+                todo ILIKE #{pattern} ESCAPE '!'
+            </if>
+            <if test="cursor != null">
+                AND
+                <choose>
+                    <when test="backwards">
+                        (COALESCE(created_at, '-infinity'::timestamp), id) &gt;
+                        (COALESCE(#{cursor.createdAt,jdbcType=TIMESTAMP}, '-infinity'::timestamp), #{cursor.id})
+                    </when>
+                    <otherwise>
+                        (COALESCE(created_at, '-infinity'::timestamp), id) &lt;
+                        (COALESCE(#{cursor.createdAt,jdbcType=TIMESTAMP}, '-infinity'::timestamp), #{cursor.id})
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+        <choose>
+            <when test="backwards">ORDER BY COALESCE(created_at, '-infinity'::timestamp) ASC, id ASC</when>
+            <otherwise>ORDER BY COALESCE(created_at, '-infinity'::timestamp) DESC, id DESC</otherwise>
+        </choose>
+        LIMIT #{limit}
     </select>
 
     <select id="findById" resultMap="todoRow">
